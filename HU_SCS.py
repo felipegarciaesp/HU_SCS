@@ -42,4 +42,13 @@ def tc_LagSCS(Lcauce, CN, S):
     # Lcauce = Largo del cauce principal (km)
     # CN = Valor de curva número, humedad antecedente II (CORROBORAR)
     # S = Pendiente media de la cuenca (m/m)
-    
+    # Resultado tc se expresa en horas
+    if Lcauce == 0 or CN == 0 or S == 0:
+        tc = 0.0
+    else:
+        term = (1000.0 / CN) - 9.0
+        if term <= 0 or S <= 0:
+            tc = 0.0
+        else:
+            tc = (3.42 * (Lcauce ** 0.8) * (term ** 0.7) / (S ** 0.5)) / 60.0
+    return tc
