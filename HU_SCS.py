@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 
+
+### Funciones para el cálculo del tiempo de concentración (tc) utilizando diferentes métodos ###
 def tc_california(Lcauce, RangoElev):
     # TC California para cuencas montañosas, con área superior a 2 km2 (CORROBORAR)
     # Lcauce = Largo del cauce principal (km)
@@ -52,3 +54,31 @@ def tc_LagSCS(Lcauce, CN, S):
         else:
             tc = (3.42 * (Lcauce ** 0.8) * (term ** 0.7) / (S ** 0.5)) / 60.0
     return tc
+
+def tc_NEsp(Lcauce, S):
+    # Tc Normas Españolas
+    # Lcauce = Largo del cauce principal (km)
+    # S = Pendiente media de la cuenca (m/m)
+    # Resultado tc se expresa en horas
+    if Lcauce == 0 or S == 0:
+        tc = 0.0
+    else:
+        tc = (18.0 * (Lcauce ** 0.76) / (S ** 0.19)) / 60.0
+    return tc
+
+### Funciones que calculan los parámetros de SCS ###
+
+def tp(tc, dt_adopt):
+    # tp corresponde al tiempo al peak, expresado en horas
+    # tc corresponde al tiempo de concentración, en horas
+    # dt_adopt corresponde al paso temporal "delta t" adoptado, en horas
+    return 0.6 * tc + dt_adopt / 2.0
+
+def qp(Area, tp):
+    # qp corresponde al caudal al peak, expresado en m3/s/mm
+    # tp corresponde al tiempo al peak, en horas
+    # Area corresponde al area de la cuenca, en km2
+    if tp == 0:
+        return 0.0
+    return 0.208 * Area / tp
+
