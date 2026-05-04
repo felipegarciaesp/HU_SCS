@@ -39,7 +39,7 @@ def tc_Giandotti(Area, Lcauce, ElevMed, ElevMin):
         tc = (4.0 * (Area ** 0.5) + 1.5 * Lcauce) / (0.8 * (Hm ** 0.5))
     return tc
 
-def tc_LagSCS(Lcauce, CN, S):
+def tc_SCS(Lcauce, CN, S):
     # Tc Lag SCS para cuencas agrícolas o urbanas con área inferior a 8 km2 (CORROBORAR)
     # Lcauce = Largo del cauce principal (km)
     # CN = Valor de curva número, humedad antecedente II (CORROBORAR)
