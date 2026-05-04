@@ -82,3 +82,35 @@ def qp(Area, tp):
         return 0.0
     return 0.208 * Area / tp
 
+### Funcion para calcular Precipitacion efectiva acumulada ###
+
+def Pp_ef_ac(Pp_tot_ac, CN):
+    # Pp_ef_ac corresponde a la precipitación efectiva acumulada [mm]
+    # Pp_tot_ac corresponde a la precipitación total acumulada en el intervalo analizado [mm]
+    # CN corresponde al valor de la curva número de la cuenca analizada
+    # S corresponde al almacenamiento
+    if CN <= 0 or CN > 100 or Pp_tot_ac < 0:
+        return 0.0
+
+    S = 25400.0 / CN - 254.0
+    a = 0.2
+    Ia = a * S
+
+    if Pp_tot_ac >= Ia:
+        return (Pp_tot_ac - Ia) ** 2 / (Pp_tot_ac - Ia + S)
+    return 0.0
+
+
+### Carga de datos desde Excel ###
+
+def cargar_Data_HU_SCS(ruta_excel="Data_HU_SCS.xlsx", hoja=0):
+    # Carga la hoja indicada del archivo Excel en un DataFrame usando un context manager
+    with pd.ExcelFile(ruta_excel) as excel_file:
+        df = pd.read_excel(excel_file, sheet_name=hoja)
+    return df
+
+
+df_Data_HU_SCS = cargar_Data_HU_SCS("Data_HU_SCS.xlsx")
+
+
+
