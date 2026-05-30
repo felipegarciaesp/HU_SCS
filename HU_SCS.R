@@ -37,6 +37,8 @@ Pp_ef_ac <- function(Pp_tot_ac, CN) {
 
 read_file_data <- function(file_path, sheet) {
   df <- openxlsx::read.xlsx(file_path, sheet = sheet, colNames = TRUE)
+  rownames(df) <- as.character(df[,1])
+  df <- df[,-1, drop = FALSE]
   df
 }
 
