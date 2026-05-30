@@ -38,7 +38,8 @@ Pp_ef_ac <- function(Pp_tot_ac, CN) {
 read_file_data <- function(file_path, sheet) {
   df <- openxlsx::read.xlsx(file_path, sheet = sheet, colNames = TRUE)
   rownames(df) <- as.character(df[,1])
-  df <- df[,-1, drop = FALSE]
+  df <- df[,-1, drop = FALSE] # drop = FALSE evita que R convierta automáticamente el dataframe en un vector cuando el resultado tiene una sola columna.
+                              # es decir, df continuara siendo un dataframe incluso si tiene 1 columna.
   df
 }
 
@@ -57,5 +58,23 @@ USCS <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "DT_USCS")
 PP_Max <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "Pp Max")
 CD <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "CD")
 
+# =====================================================================
+# Se determinan precipitaciones de diseño (Pp_Max * CD)
+
+cuencas <- colnames(PP_Max)  # nombres de las cuencas
+
+Pp_dur <- lapply(cuencas, function(cuenca) {
+  pp  <- PP_Max[[cuenca]]           # vector de Pp max 24h por T
+  cd  <- CD[[cuenca]]               # vector de coeficientes de duración
+  
+  # Producto exterior: cada T * cada duración
+  df <- outer(pp, cd)
+  rownames(df) <- rownames(PP_Max)  # periodos de retorno
+  colnames(df) <- rownames(CD)      # duraciones de tormenta
+  as.data.frame(df)
+})
+
+names(Pp_dur) <- cuencas #Se asigna nombre de cuencas respectivas al df Pp_dur
+# =====================================================================
 
 
