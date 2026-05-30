@@ -14,21 +14,11 @@ setwd("C:/Codigos/HU_SCS")
 
 
 
+
+
 # =====================================================================
 # DEFINICION DE FUNCIONES
 # =====================================================================
-
-tp <- function(tc, dt_adopt) {
-  # tc: tiempo de concentración (horas)
-  # dt_adopt: paso temporal adoptado (horas)
-  0.6 * tc + dt_adopt / 2
-}
-
-qp <- function(Area, tp) {
-  # Area: área de la cuenca (km2)
-  # tp: tiempo al peak (horas)
-  ifelse(tp == 0, 0.0, 0.208 * Area / tp)
-}
 
 Pp_ef_ac <- function(Pp_tot_ac, CN) {
   # Pp_ef_ac: precipitación efectiva acumulada [mm]
@@ -44,3 +34,26 @@ Pp_ef_ac <- function(Pp_tot_ac, CN) {
   }
   return(0.0)
 }
+
+read_file_data <- function(file_path, sheet) {
+  df <- openxlsx::read.xlsx(file_path, sheet = sheet, colNames = TRUE)
+  df
+}
+
+create_empty_df <- function(index, columns) {
+  df <- data.frame(matrix(NA, nrow = length(index), ncol = length(columns)))
+  rownames(df) <- unlist(index)
+  colnames(df) <- unlist(columns)
+  df
+}
+
+# =====================================================================
+# 
+# =====================================================================
+
+USCS <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "DT_USCS")
+PP_Max <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "Pp Max")
+CD <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "CD")
+
+
+
