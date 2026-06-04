@@ -35,11 +35,12 @@ Pp_ef_ac <- function(Pp_tot_ac, CN) {
   return(0.0)
 }
 
-read_file_data <- function(file_path, sheet) {
+read_file_data <- function(file_path, sheet, use_rownames = TRUE) {
   df <- openxlsx::read.xlsx(file_path, sheet = sheet, colNames = TRUE)
-  rownames(df) <- as.character(df[,1])
-  df <- df[,-1, drop = FALSE] # drop = FALSE evita que R convierta automáticamente el dataframe en un vector cuando el resultado tiene una sola columna.
-                              # es decir, df continuara siendo un dataframe incluso si tiene 1 columna.
+  if (use_rownames) {
+    rownames(df) <- as.character(df[,1])
+    df <- df[,-1, drop = FALSE]
+  }
   df
 }
 
@@ -57,6 +58,12 @@ create_empty_df <- function(index, columns) {
 USCS <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "DT_USCS")
 PP_Max <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "Pp Max")
 CD <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "CD")
+
+Ratios_HU <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "Ratios", use_rownames = FALSE)
+colnames(Ratios_HU) <- c("t/Tp", "q/qp", "Qa/Q")
+
+Param_HUS <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "HUS")
+colnames(Param_HUS) <- c("dt propuesto", "dt", "Tp", "Tb", "qp")
 
 # =====================================================================
 # Se determinan precipitaciones de diseño (Pp_Max * CD)
@@ -78,3 +85,29 @@ names(Pp_dur) <- cuencas #Se asigna nombre de cuencas respectivas al df Pp_dur
 # =====================================================================
 
 
+# =====================================================================
+# Confeccion de Hidrograma Unitario
+# =====================================================================
+
+# Se crea lista de tiempos por cuenca (o hasta Tp/dt +1)
+
+t <- lapply(cuencas, function(cuenca) {
+  Tb <- Param_HUS[cuenca, "Tb"]
+  dt <- Param_HUS[cuenca, "dt"]
+  n <- as.integer(Tb / dt) + 1
+  seq(0, n * dt, by = dt)
+})
+
+Ratios_HU <- lapply(cuencas, function(cuenca) {
+  Tp <- Param_HUS[cuenca, "Tp"]
+  df <- Ratios_HU
+  # Insertar nueva columna "t" en la segunda posición
+  df <- data.frame(
+    df[, 1, drop = FALSE],
+    t = df[["t/Tp"]] * Tp,
+    df[, 2:ncol(df), drop = FALSE]
+  )
+  df
+})
+
+names(Ratios_HU) <- cuencas
