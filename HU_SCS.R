@@ -39,7 +39,8 @@ read_file_data <- function(file_path, sheet, use_rownames = TRUE) {
   df <- openxlsx::read.xlsx(file_path, sheet = sheet, colNames = TRUE)
   if (use_rownames) {
     rownames(df) <- as.character(df[,1])
-    df <- df[,-1, drop = FALSE]
+    df <- df[,-1, drop = FALSE] # drop = FALSE evita que R convierta automáticamente el dataframe en un vector cuando el resultado tiene una sola columna.
+                                # es decir, df continuara siendo un dataframe incluso si tiene 1 columna.
   }
   df
 }
@@ -104,10 +105,18 @@ Ratios_HU <- lapply(cuencas, function(cuenca) {
   # Insertar nueva columna "t" en la segunda posición
   df <- data.frame(
     df[, 1, drop = FALSE],
-    t = df[["t/Tp"]] * Tp,
+    time = df[["t/Tp"]] * Tp,
     df[, 2:ncol(df), drop = FALSE]
   )
+  # En R no existe una funcion directa para insertar columnas en una posicion especifica, por eso se
+  # reconstruye el dataframe en el orden deseado (yo queria que los valores de time estuvieran en segunda columna)
+  colnames(df) <- c("t/Tp", "t", "q/qp", "Qa/Q")
   df
 })
 
 names(Ratios_HU) <- cuencas
+
+
+# AL RETOMAR EL CODIGO CALCULA LOS VALORES DE DISCHARGE EN RATIOS_HU (APROVECHA LA FUNCION QUE ESTA MODIFICANDO ESTE DF).
+# CONTINUA SACANDO RESULTADOS PARA OBTENER LOS HUS SCS.
+# AVERIGUA PORQUE AL ELIMINAR FILA 64 (COLNAMES INICIAL DE RATIOS_HU) NO TE FUNCIONA EL COLNAMES DE 113.
