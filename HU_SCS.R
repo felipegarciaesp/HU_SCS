@@ -90,33 +90,38 @@ names(Pp_dur) <- cuencas #Se asigna nombre de cuencas respectivas al df Pp_dur
 # Confeccion de Hidrograma Unitario
 # =====================================================================
 
-# Se crea lista de tiempos por cuenca (o hasta Tp/dt +1)
-
-t <- lapply(cuencas, function(cuenca) {
-  Tb <- Param_HUS[cuenca, "Tb"]
-  dt <- Param_HUS[cuenca, "dt"]
-  n <- as.integer(Tb / dt) + 1
-  seq(0, n * dt, by = dt)
-})
-
-Ratios_HU <- lapply(cuencas, function(cuenca) {
-  Tp <- Param_HUS[cuenca, "Tp"]
-  df <- Ratios_HU
-  # Insertar nueva columna "t" en la segunda posición
-  df <- data.frame(
-    df[, 1, drop = FALSE],
-    time = df[["t/Tp"]] * Tp,
-    df[, 2:ncol(df), drop = FALSE]
+# Se crea dataframe con las coordenadas del Hidrograma Unitario:
+Coord_HUS <- lapply(cuencas, function(cuenca) {
+  Tp    <- Param_HUS[cuenca, "Tp"]
+  qp    <- Param_HUS[cuenca, "qp"]
+  
+  data.frame(
+    time = Ratios_HU[["t/Tp"]] * Tp,
+    q    = Ratios_HU[["q/qp"]] * qp
   )
-  # En R no existe una funcion directa para insertar columnas en una posicion especifica, por eso se
-  # reconstruye el dataframe en el orden deseado (yo queria que los valores de time estuvieran en segunda columna)
-  colnames(df) <- c("t/Tp", "t", "q/qp", "Qa/Q")
-  df
 })
 
-names(Ratios_HU) <- cuencas
+names(Coord_HUS) <- cuencas
+
+# Se crea dataframe con el Hidrograma Unitario de cada cuenca:
+HUS <- lapply(cuencas, function(cuenca) {
+  Tb    <- Param_HUS[cuenca, "Tb"]
+  dt    <- Param_HUS[cuenca, "dt"]
+  n     <- as.integer(Tb / dt) + 1
+  time  <- seq(0, n * dt, by = dt)
+  
+  # Interpolación lineal de q desde Coord_HUS
+  q <- approx(
+    x    = Coord_HUS[[cuenca]][["time"]],   # tiempos de referencia
+    y    = Coord_HUS[[cuenca]][["q"]],      # caudales de referencia
+    xout = time,                            # tiempos donde interpolar
+    rule = 2                                # fuera del rango, usa el valor extremo
+  )$y
+  
+  data.frame(time = time, q = q)
+})
+
+names(HUS) <- cuencas
 
 
-# AL RETOMAR EL CODIGO CALCULA LOS VALORES DE DISCHARGE EN RATIOS_HU (APROVECHA LA FUNCION QUE ESTA MODIFICANDO ESTE DF).
-# CONTINUA SACANDO RESULTADOS PARA OBTENER LOS HUS SCS.
-# AVERIGUA PORQUE AL ELIMINAR FILA 64 (COLNAMES INICIAL DE RATIOS_HU) NO TE FUNCIONA EL COLNAMES DE 113.
+
