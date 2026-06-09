@@ -119,6 +119,11 @@ HUS <- lapply(cuencas, function(cuenca) {
   )$y
   
   data.frame(time = time, q = q)
+  
+  # approx() realiza interpolación lineal entre los puntos de Coord_HUS
+  # rule = 2 → si algún valor de time cae fuera del rango de Coord_HUS, usa el valor del extremo más cercano en lugar de NA
+  # $y → extrae solo los valores interpolados del resultado de approx()
+  
 })
 
 names(HUS) <- cuencas
