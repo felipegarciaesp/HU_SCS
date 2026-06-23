@@ -134,5 +134,5 @@ HUS <- lapply(cuencas, function(cuenca) {
 names(HUS) <- cuencas
 
 # Me faltaría hacer la correccion por el volumen para que salga unitario.
-# Al retomar ve que los numeros obtenidos de q te calcen con lo indicado en la planilla Ausenco para C_01
+# Al retomar ve que los numeros obtenidos de "q" te calcen con lo indicado en la planilla Ausenco para C_01 (C_02 ya está corroborado)
 
