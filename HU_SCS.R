@@ -64,7 +64,8 @@ Ratios_HU <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "Ratios", use_rown
 colnames(Ratios_HU) <- c("t/Tp", "q/qp", "Qa/Q")
 
 Param_HUS <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "HUS")
-colnames(Param_HUS) <- c("dt propuesto", "dt", "Tp", "Tb", "qp")
+colnames(Param_HUS) <- c("Area", "dt propuesto", "dt", "Tp", "Tb", "qp")
+
 
 # =====================================================================
 # Se determinan precipitaciones de diseño (Pp_Max * CD)
@@ -94,10 +95,14 @@ names(Pp_dur) <- cuencas #Se asigna nombre de cuencas respectivas al df Pp_dur
 Coord_HUS <- lapply(cuencas, function(cuenca) {
   Tp    <- Param_HUS[cuenca, "Tp"]
   qp    <- Param_HUS[cuenca, "qp"]
+  A     <- Param_HUS[cuenca, "Area"]
+  
+  # Se define qp_ como (qp / A) * 1000, en unidades de [L / (s*mm*km2)]
+  qp_   <- (qp / A) * 1000 
   
   data.frame(
     time = Ratios_HU[["t/Tp"]] * Tp,
-    q    = Ratios_HU[["q/qp"]] * qp
+    q    = Ratios_HU[["q/qp"]] * qp_
   )
 })
 
@@ -128,5 +133,6 @@ HUS <- lapply(cuencas, function(cuenca) {
 
 names(HUS) <- cuencas
 
-
+# Me faltaría hacer la correccion por el volumen para que salga unitario.
+# Al retomar ve que los numeros obtenidos de q te calcen con lo indicado en la planilla Ausenco para C_01
 
