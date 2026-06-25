@@ -108,6 +108,20 @@ Coord_HUS <- lapply(cuencas, function(cuenca) {
 
 names(Coord_HUS) <- cuencas
 
+# La profundidad de escorrentia directa en el hidrograma unitario debe comprobarse
+# igual a 1 mm (o pulgadas o centimetros, segun se trabaje)
+# A continuacion, se calcula esta profundidad de escorrentia directa y se normalizan por
+# este valor los resultados de qp_, para que de esta forma quedarnos con valores de 
+# q_corr cuya profundidad de escorrentia directa sea 1 mm.
+
+S <- sapply(cuencas, function(cuenca) {
+  sum(Coord_HUS[[cuenca]][["q"]])
+}) # Sumatoria de escorrentia directa en el hidrograma unitario, en [L / (s*mm*km2)]
+
+#ACA QUEDE, SIGUE SACANDO V, y d tal cual esta en e ejemplo 7.4.1
+#Podrias intentar hacer el analisis dimensional y ver como quedarian los calculos
+#si no conviertes q a l/s
+
 # Se crea dataframe con el Hidrograma Unitario de cada cuenca:
 HUS <- lapply(cuencas, function(cuenca) {
   Tb    <- Param_HUS[cuenca, "Tb"]
@@ -133,6 +147,7 @@ HUS <- lapply(cuencas, function(cuenca) {
 
 names(HUS) <- cuencas
 
-# Me faltaría hacer la correccion por el volumen para que salga unitario.
-# Al retomar ve que los numeros obtenidos de "q" te calcen con lo indicado en la planilla Ausenco para C_01 (C_02 ya está corroborado)
+
+
+
 
