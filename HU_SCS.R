@@ -93,6 +93,7 @@ names(Pp_dur) <- cuencas #Se asigna nombre de cuencas respectivas al df Pp_dur
   # Se utiliza esta sección para definir algunas variables globales, que seran
   # utilizadas en distintas partes del código.
 
+
 #dt    <- Param_HUS[cuenca, "dt"] # Paso de tiempo escogido
 
 # =====================================================================
@@ -126,11 +127,18 @@ S <- sapply(cuencas, function(cuenca) {
   sum(Coord_HUS[[cuenca]][["q"]])
 }) # Sumatoria de escorrentia directa en el hidrograma unitario, en [L / (s*mm*km2)]
 
-V <- 
+V <- sapply(cuencas, function(cuenca){
+  dt    <- Param_HUS[cuenca, "dt"]
+  S[[cuenca]] * dt * 3600 / 1000000
+})
+# Esto no lo deberias sacar asi. El vector time de Coord_HUS no esta separado cada dt hrs.
+# Lo que te recomiendo es confeccionar el dataframe que tiene los valores de tiempo
+# que realmente vas a utilizar (que requiere hacer una interpolacion) y a partir de aca recien
+# hacer la correccion necesaria para tener un volumen de 1 mm.
+# Este dataframe me parece que esta en las sigueintes lineas, en HUS.
+# Revisa planilla con macro, me parece que ahi lo hacen asi.
 #ACA QUEDE, SIGUE SACANDO V, y d tal cual esta en e ejemplo 7.4.1
-#Retoma la definición global de variables que quieres hacer a aprtir de la fila 96.
-#Podrias intentar hacer el analisis dimensional y ver como quedarian los calculos
-#si no conviertes q a l/s
+
 
 # Se crea dataframe con el Hidrograma Unitario de cada cuenca:
 HUS <- lapply(cuencas, function(cuenca) {
