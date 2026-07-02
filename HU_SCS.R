@@ -88,6 +88,14 @@ names(Pp_dur) <- cuencas #Se asigna nombre de cuencas respectivas al df Pp_dur
 
 
 # =====================================================================
+# Definicion de variables globales
+# =====================================================================
+  # Se utiliza esta sección para definir algunas variables globales, que seran
+  # utilizadas en distintas partes del código.
+
+#dt    <- Param_HUS[cuenca, "dt"] # Paso de tiempo escogido
+
+# =====================================================================
 # Confeccion de Hidrograma Unitario
 # =====================================================================
 
@@ -118,7 +126,9 @@ S <- sapply(cuencas, function(cuenca) {
   sum(Coord_HUS[[cuenca]][["q"]])
 }) # Sumatoria de escorrentia directa en el hidrograma unitario, en [L / (s*mm*km2)]
 
+V <- 
 #ACA QUEDE, SIGUE SACANDO V, y d tal cual esta en e ejemplo 7.4.1
+#Retoma la definición global de variables que quieres hacer a aprtir de la fila 96.
 #Podrias intentar hacer el analisis dimensional y ver como quedarian los calculos
 #si no conviertes q a l/s
 
