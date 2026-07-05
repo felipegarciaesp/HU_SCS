@@ -117,29 +117,6 @@ Coord_HUS <- lapply(cuencas, function(cuenca) {
 
 names(Coord_HUS) <- cuencas
 
-# La profundidad de escorrentia directa en el hidrograma unitario debe comprobarse
-# igual a 1 mm (o pulgadas o centimetros, segun se trabaje)
-# A continuacion, se calcula esta profundidad de escorrentia directa y se normalizan por
-# este valor los resultados de qp_, para que de esta forma quedarnos con valores de 
-# q_corr cuya profundidad de escorrentia directa sea 1 mm.
-
-S <- sapply(cuencas, function(cuenca) {
-  sum(Coord_HUS[[cuenca]][["q"]])
-}) # Sumatoria de escorrentia directa en el hidrograma unitario, en [L / (s*mm*km2)]
-
-V <- sapply(cuencas, function(cuenca){
-  dt    <- Param_HUS[cuenca, "dt"]
-  S[[cuenca]] * dt * 3600 / 1000000
-})
-# Esto no lo deberias sacar asi. El vector time de Coord_HUS no esta separado cada dt hrs.
-# Lo que te recomiendo es confeccionar el dataframe que tiene los valores de tiempo
-# que realmente vas a utilizar (que requiere hacer una interpolacion) y a partir de aca recien
-# hacer la correccion necesaria para tener un volumen de 1 mm.
-# Este dataframe me parece que esta en las sigueintes lineas, en HUS.
-# Revisa planilla con macro, me parece que ahi lo hacen asi.
-#ACA QUEDE, SIGUE SACANDO V, y d tal cual esta en e ejemplo 7.4.1
-
-
 # Se crea dataframe con el Hidrograma Unitario de cada cuenca:
 HUS <- lapply(cuencas, function(cuenca) {
   Tb    <- Param_HUS[cuenca, "Tb"]
@@ -164,6 +141,23 @@ HUS <- lapply(cuencas, function(cuenca) {
 })
 
 names(HUS) <- cuencas
+
+# La profundidad de escorrentia directa en el hidrograma unitario debe comprobarse
+# igual a 1 mm (o pulgadas o centimetros, segun se trabaje)
+# A continuacion, se calcula esta profundidad de escorrentia directa y se normalizan por
+# este valor los resultados de qp_, para que de esta forma quedarnos con valores de 
+# q_corr cuya profundidad de escorrentia directa sea 1 mm.
+
+S <- sapply(cuencas, function(cuenca) {
+  sum(HUS[[cuenca]][["q"]])
+}) # Sumatoria de escorrentia directa en el hidrograma unitario, en [L / (s*mm*km2)]
+
+V <- sapply(cuencas, function(cuenca){
+  dt    <- Param_HUS[cuenca, "dt"]
+  S[[cuenca]] * dt * 3600 / 1000000
+})
+
+#ACA QUEDE, CONTINUA tal cual esta en eL ejemplo 7.4.1
 
 
 
