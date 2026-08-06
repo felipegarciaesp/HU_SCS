@@ -152,12 +152,29 @@ S <- sapply(cuencas, function(cuenca) {
   sum(HUS[[cuenca]][["q"]])
 }) # Sumatoria de escorrentia directa en el hidrograma unitario, en [L / (s*mm*km2)]
 
-V <- sapply(cuencas, function(cuenca){
+D <- sapply(cuencas, function(cuenca){
   dt    <- Param_HUS[cuenca, "dt"]
   S[[cuenca]] * dt * 3600 / 1000000
+})  # Altura de lamina de agua, en mm por mm de lluvia efectiva. Este valor se ocupa para normalizar
+    # los valores de q en HUS para asegurarnos que el hidrograma unitario tenga una lámina de agua
+    # de 1 mm por mm de lluvia efectiva.
+
+# Normalizar HUS: dividir cada q por el D de su cuenca
+HUS <- lapply(cuencas, function(cuenca) {
+  df <- HUS[[cuenca]]            # hidrograma original
+  d  <- D[[cuenca]]              # factor de normalización para la cuenca
+  if (is.na(d) || d == 0) {      # proteger contra NA/0
+    warning(sprintf("D faltante o cero para la cuenca '%s' — no se normaliza", cuenca))
+    return(df)
+  }
+  df$q <- df$q / d
+  df
 })
 
-#ACA QUEDE, CONTINUA tal cual esta en eL ejemplo 7.4.1
+names(HUS) <- cuencas
+
+#Aca quedé. Lo que sigue es agregar el hietrograma de tormenta. Ve como hacen este paso las 3 planillas que tienes.
+
 
 
 
