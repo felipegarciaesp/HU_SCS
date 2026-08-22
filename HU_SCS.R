@@ -24,6 +24,7 @@ Pp_ef_ac <- function(Pp_tot_ac, CN) {
   # Pp_ef_ac: precipitación efectiva acumulada [mm]
   # Pp_tot_ac: precipitación total acumulada [mm]
   # CN: curva número (0 < CN <= 100)
+  # S: deficit potencial maximo de escorrentia [mm]
   if (CN <= 0 || CN > 100 || Pp_tot_ac < 0) return(0.0)
   
   S <- 25400 / CN - 254
@@ -315,11 +316,59 @@ Hietograma <- lapply(cuencas, function(cuenca) {
   
 }) |> setNames(cuencas)
 
-# ACÁ QUEDE, LO QUE SIGUE ES PODER HACER LA INTERPOLACION DE LOS HIETOGRAMAS PARA QUE TENGAN EL MISMO INTERVALO
-# DT ESCOGIDO PARA EL HIDROGRAMA.
-# LUEGO HABRÍA QUE SACAR LA PP EFECTIVA Y CON ESO DETERMINAR LA CONVOLUCIÓN (REVISA IGUAL LOS PASOS A SEGUIR).
-# EVALUA SI SERÍA MEJOR DEJAR EL TIEMPO COMO INDICE EN LOS HIETOGRAMAS, VE SI VALE LA PENA.
+# =====================================================================
+# Re-interpolación de Hietogramas al dt del Hidrograma
+# =====================================================================
 
+# Hietograma_dt[[cuenca]][[tormenta]][[periodo]][[duracion]]
+# → data.frame con columnas: time [h], Pp_cum [mm], Pp_inc [mm]
+# → con paso temporal dt de cada cuenca
+
+Hietograma_dt <- lapply(cuencas, function(cuenca) {
+  dt <- Param_HUS[cuenca, "dt"]
+  
+  lapply(names(Tormentas), function(nombre_tormenta) {
+    
+    lapply(periodos, function(periodo) {
+      
+      lapply(seq_along(duraciones), function(i) {
+        dur   <- duraciones[i]
+        dur_h <- dur_h_vals[i]
+        
+        hiet     <- Hietograma[[cuenca]][[nombre_tormenta]][[periodo]][[dur]]
+        time_old <- hiet[["time"]]
+        Pp_cum_old <- hiet[["Pp_cum"]]
+        
+        # Nuevo vector de tiempo con paso dt
+        time_new <- seq(0, dur_h, by = dt)
+        
+        # Interpolación lineal de Pp_cum al nuevo dt
+        Pp_cum_new <- approx(
+          x    = time_old,
+          y    = Pp_cum_old,
+          xout = time_new,
+          rule = 2
+        )$y
+        
+        # Recalcular Pp_inc con el nuevo dt
+        Pp_inc_new <- c(0, diff(Pp_cum_new))
+        
+        data.frame(
+          time   = time_new,
+          Pp_cum = Pp_cum_new,
+          Pp_inc = Pp_inc_new
+        )
+        
+      }) |> setNames(duraciones)
+      
+    }) |> setNames(periodos)
+    
+  }) |> setNames(names(Tormentas))
+  
+}) |> setNames(cuencas)
+
+# ACA QUEDE, LO QUE VIENE ES HACER HIETOGRAMAS CON LA PRECIPITACION EFECTIVA, LUEGO DE ESO VIENE LA CONVOLUCION.
+# (CORROBORA IGUALMENTE)
 
 
 
