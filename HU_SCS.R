@@ -52,11 +52,100 @@ create_empty_df <- function(index, columns) {
   df
 }
 
+read_tormentas <- function(file_path, sheet) {
+  # Leer hoja sin encabezados ni omitir filas/columnas vacías
+  raw <- openxlsx::read.xlsx(
+    file_path, sheet = sheet,
+    colNames = FALSE, skipEmptyRows = FALSE, skipEmptyCols = FALSE
+  )
+  
+  ncols <- ncol(raw)
+  tormentas <- list()
+  col <- 1
+  
+  while (col <= ncols) {
+    
+    # --- Columna separadora (vacía): saltar ---
+    if (all(is.na(raw[, col]))) {
+      col <- col + 1
+      next
+    }
+    
+    # --- Validar que exista la segunda columna del par ---
+    if (col + 1 > ncols) {
+      stop(sprintf(
+        "Error en columna %d: se esperaba una segunda columna de datos pero no existe.\n",
+        col
+      ))
+    }
+    
+    # --- Fila 1: título ---
+    titulo_label <- as.character(raw[1, col])
+    titulo_nombre <- as.character(raw[1, col + 1])
+    
+    if (is.na(titulo_label) || !grepl("Tormenta", titulo_label, ignore.case = TRUE)) {
+      stop(sprintf(
+        "Error en columna %d: se esperaba 'Tormenta N°X' en la fila 1 pero se encontró: '%s'.\n",
+        col, titulo_label
+      ))
+    }
+    if (is.na(titulo_nombre) || titulo_nombre == "NA") {
+      stop(sprintf(
+        "Error en columna %d: falta el nombre de la tormenta en la celda derecha de la fila 1.\n",
+        col
+      ))
+    }
+    
+    storm_name <- titulo_nombre
+    
+    # --- Filas 3 en adelante: datos ---
+    data_raw <- raw[3:nrow(raw), c(col, col + 1)]
+    valid    <- !is.na(data_raw[, 1]) & !is.na(data_raw[, 2])
+    data_raw <- data_raw[valid, ]
+    
+    if (nrow(data_raw) == 0) {
+      stop(sprintf("Error en tormenta '%s': no se encontraron datos.\n", storm_name))
+    }
+    
+    # Valores en formato Percentage de Excel → vienen como decimales (0–1) → × 100
+    tiempo <- as.numeric(data_raw[, 1]) * 100
+    pp     <- as.numeric(data_raw[, 2]) * 100
+    
+    df <- data.frame(`tiempo (%)` = tiempo, `Pp (%)` = pp, check.names = FALSE)
+    
+    # --- Validaciones de rango ---
+    tol <- 1e-6
+    if (abs(df[1, "tiempo (%)"])              > tol) stop(sprintf("Error en tormenta '%s': el tiempo no comienza en 0%%.\n",          storm_name))
+    if (abs(df[nrow(df), "tiempo (%)"] - 100) > tol) stop(sprintf("Error en tormenta '%s': el tiempo no termina en 100%%.\n",         storm_name))
+    if (abs(df[1, "Pp (%)"])                  > tol) stop(sprintf("Error en tormenta '%s': la precipitación no comienza en 0%%.\n",   storm_name))
+    if (abs(df[nrow(df), "Pp (%)"] - 100)     > tol) stop(sprintf("Error en tormenta '%s': la precipitación no termina en 100%%.\n", storm_name))
+    
+    # --- Validar separador después del bloque (si quedan columnas) ---
+    next_col <- col + 2
+    if (next_col <= ncols && !all(is.na(raw[, next_col]))) {
+      stop(sprintf(
+        "Error: se esperaba una columna vacía separadora después de la tormenta '%s' (columna %d), pero tiene datos.\n",
+        storm_name, next_col
+      ))
+    }
+    
+    tormentas[[storm_name]] <- df
+    col <- col + 2
+  }
+  
+  if (length(tormentas) == 0) {
+    stop("Error: no se encontró ninguna tormenta en la pestaña 'Tormentas'. Verifique el formato.\n")
+  }
+  
+  message(sprintf("Se cargaron %d tormenta(s): %s", length(tormentas), paste(names(tormentas), collapse = ", ")))
+  tormentas
+}
+
 # =====================================================================
 # 
 # =====================================================================
 
-USCS <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "DT_USCS")
+Tormentas <- read_tormentas(file.path(getwd(), "Inputs.xlsx"), "Tormentas")
 PP_Max <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "Pp Max")
 CD <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "CD")
 
@@ -173,8 +262,63 @@ HUS <- lapply(cuencas, function(cuenca) {
 
 names(HUS) <- cuencas
 
-#Aca quedé. Lo que sigue es agregar el hietrograma de tormenta. Ve como hacen este paso las 3 planillas que tienes.
+# =====================================================================
+# Confeccion de Hietograma de Tormenta
+# =====================================================================
 
+duraciones <- rownames(CD)   # duraciones disponibles [h]
+periodos   <- rownames(PP_Max)  # periodos de retorno disponibles
+dur_h_vals <- as.numeric(duraciones)  # duraciones como número
+
+# Hietograma[[cuenca]][[tormenta]][[periodo]][[duracion]]
+# → data.frame con columnas: time [h], Pp_cum [mm], Pp_inc [mm]
+
+Hietograma <- lapply(cuencas, function(cuenca) {
+  
+  lapply(names(Tormentas), function(nombre_tormenta) {
+    tormenta <- Tormentas[[nombre_tormenta]]  # df con tiempo(%) y Pp(%)
+    
+    lapply(periodos, function(periodo) {
+      
+      lapply(seq_along(duraciones), function(i) {
+        dur   <- duraciones[i]   # duración como string [h]
+        dur_h <- dur_h_vals[i]   # duración como número [h]
+        Pp    <- Pp_dur[[cuenca]][periodo, dur]  # Pp Máx de diseño [mm]
+        
+        if (is.na(Pp)) {
+          stop(sprintf(
+            "Error: Pp no encontrada para cuenca='%s', T='%s', duración='%s'.\n",
+            cuenca, periodo, dur
+          ))
+        }
+        
+        # tiempo (%) → time [h] : multiplicar por la duración
+        time_h   <- (tormenta[["tiempo (%)"]] / 100) * dur_h
+        
+        # Pp (%) → Pp_cum [mm] : multiplicar por la Pp Max de diseño
+        Pp_cum   <- (tormenta[["Pp (%)"]]    / 100) * Pp
+        
+        # Precipitación incremental [mm]
+        Pp_inc   <- c(0, diff(Pp_cum))
+        
+        data.frame(
+          time   = time_h,
+          Pp_cum = Pp_cum,
+          Pp_inc = Pp_inc
+        )
+        
+      }) |> setNames(duraciones)
+      
+    }) |> setNames(periodos)
+    
+  }) |> setNames(names(Tormentas))
+  
+}) |> setNames(cuencas)
+
+# ACÁ QUEDE, LO QUE SIGUE ES PODER HACER LA INTERPOLACION DE LOS HIETOGRAMAS PARA QUE TENGAN EL MISMO INTERVALO
+# DT ESCOGIDO PARA EL HIDROGRAMA.
+# LUEGO HABRÍA QUE SACAR LA PP EFECTIVA Y CON ESO DETERMINAR LA CONVOLUCIÓN (REVISA IGUAL LOS PASOS A SEGUIR).
+# EVALUA SI SERÍA MEJOR DEJAR EL TIEMPO COMO INDICE EN LOS HIETOGRAMAS, VE SI VALE LA PENA.
 
 
 
