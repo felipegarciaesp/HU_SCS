@@ -154,7 +154,7 @@ Ratios_HU <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "Ratios", use_rown
 colnames(Ratios_HU) <- c("t/Tp", "q/qp", "Qa/Q")
 
 Param_HUS <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "HUS")
-colnames(Param_HUS) <- c("Area", "dt propuesto", "dt", "Tp", "Tb", "qp")
+colnames(Param_HUS) <- c("Area", "CN", "dt propuesto", "dt", "Tp", "Tb", "qp")
 
 
 # =====================================================================
