@@ -367,9 +367,110 @@ Hietograma_dt <- lapply(cuencas, function(cuenca) {
   
 }) |> setNames(cuencas)
 
-# ACA QUEDE, LO QUE VIENE ES HACER HIETOGRAMAS CON LA PRECIPITACION EFECTIVA, LUEGO DE ESO VIENE LA CONVOLUCION.
-# (CORROBORA IGUALMENTE)
+# =====================================================================
+# Hietogramas de Precipitación Efectiva
+# =====================================================================
 
+# Hietograma_ef[[cuenca]][[tormenta]][[periodo]][[duracion]]
+# → data.frame con columnas: time [h], Pp_ef_cum [mm], Pp_ef_inc [mm]
+
+Hietograma_ef <- lapply(cuencas, function(cuenca) {
+  CN <- Param_HUS[cuenca, "CN"]
+  
+  lapply(names(Tormentas), function(nombre_tormenta) {
+    
+    lapply(periodos, function(periodo) {
+      
+      lapply(seq_along(duraciones), function(i) {
+        dur  <- duraciones[i]
+        
+        hiet <- Hietograma_dt[[cuenca]][[nombre_tormenta]][[periodo]][[dur]]
+        
+        # Aplicar Pp_ef_ac sobre cada valor de Pp_cum
+        Pp_ef_cum <- sapply(hiet[["Pp_cum"]], function(Pp_tot_ac) {
+          Pp_ef_ac(Pp_tot_ac, CN)
+        })
+        
+        # Precipitación efectiva incremental [mm]
+        Pp_ef_inc <- c(0, diff(Pp_ef_cum))
+        
+        data.frame(
+          time      = hiet[["time"]],
+          Pp_ef_cum = Pp_ef_cum,
+          Pp_ef_inc = Pp_ef_inc
+        )
+        
+      }) |> setNames(duraciones)
+      
+    }) |> setNames(periodos)
+    
+  }) |> setNames(names(Tormentas))
+  
+}) |> setNames(cuencas)
+
+# =====================================================================
+# Hidrograma de Escorrentía Directa (HED) - Convolución
+# =====================================================================
+
+# HED[[cuenca]][[tormenta]][[periodo]][[duracion]]
+# → data.frame con columnas: time [h], q [m3/s]
+
+HED <- lapply(cuencas, function(cuenca) {
+  dt <- Param_HUS[cuenca, "dt"]
+  A  <- Param_HUS[cuenca, "Area"]
+  
+  lapply(names(Tormentas), function(nombre_tormenta) {
+    
+    lapply(periodos, function(periodo) {
+      
+      lapply(seq_along(duraciones), function(i) {
+        dur <- duraciones[i]
+        
+        # Vector de precipitación efectiva incremental [mm]
+        P <- Hietograma_ef[[cuenca]][[nombre_tormenta]][[periodo]][[dur]][["Pp_ef_inc"]]
+        
+        # Vector de caudales del hidrograma unitario [L/(s·mm·km2)]
+        U <- HUS[[cuenca]][["q"]]
+        
+        # Convolución → resultado en [L/(s·km2)]
+        q_conv <- convolve(P, rev(U), type = "open")
+        
+        # Conversión de unidades:
+        # [L/(s·mm·km2)] * [mm] * [km2] / 1000 → [m3/s]
+        q_m3s <- q_conv * A / 1000
+        
+        # Vector de tiempo para el HED
+        n_pasos <- length(q_m3s)
+        time    <- seq(0, (n_pasos - 1) * dt, by = dt)
+        
+        data.frame(
+          time = time,
+          q    = q_m3s
+        )
+        
+      }) |> setNames(duraciones)
+      
+    }) |> setNames(periodos)
+    
+  }) |> setNames(names(Tormentas))
+  
+}) |> setNames(cuencas)
+
+
+# SIGUIENTES PASOS:
+
+# 1. SE SUPONE QUE LAS PROFUNDIDADES DE EXCESO DE LLUVIA Y LA ESCORRENTIA DIRECTA DEBEN
+# SER IGUALES. HAZ LOS CAMBIOS DE UNIDADES RESPECTIVOS Y CORROBORA ESTO. AVERIGUA QUE HACER
+# SI ESTO NO SE CUMPLE.
+# 2.CORROBORA QUE LOS RESULTADOS TE DAN PARECIDOS O DENTRO DEL ORDEN QUE PLANILLA DE AUSENCO.
+# ES ESPERABLE CIERTA DIFERENCIA, DADO QUE HAY UNA FORMULA QUE NO ESTÁ BIEN DEFINIDA EN EL 
+# EXCEL Y ADEMAS DE QUE NO ESTÁS DE ACUERDO EN EL PASO TEMPORAL CON LA QUE CALCULAN EL VOLUMEN
+# CON EL QUE NORMALIZAN EL HU (O ALGO ASI ERA). PARA HACER ESTO DEBERIAS HOMOLOGAR EN EL CODIGO
+# LAS DISTRIBUIONES DE TORMENTA QUE ESTAN EN LA PLANILLA, ANALIZA SOLO DURACION DE TORMENTA DE
+# 12 HORAS Y EVALUA 2 PERIODOS DE RETORNO COMO MAXIMO.
+# 3. PARA COMPARAR RESULTADOS DEBES PEDIRLE AL CODIGO QUE TE ARROJE EL Q MAX Y EL VOLUMEN.
+# 4. OTRA CORROBORACION IMPORTANTE QUE DEBES HACER ES CON HEC-HMS, REVISA QUE TE DA CON ESTO.
+# 5. LO SIGUIENTE SERIA PEDIRLE A COPILOT QUE TE GENERE CARPETAS CON RESULTADOS Y GRAFICOS
 
 
 
