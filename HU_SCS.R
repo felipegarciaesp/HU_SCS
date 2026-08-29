@@ -11,8 +11,17 @@ cat("\014")
 ## Directorio de trabajo
 #-------------------
 setwd("C:/Codigos/HU_SCS")
+dir_inputs  <- file.path(getwd(), "Inputs")
+dir_outputs <- file.path(getwd(), "Outputs")
+file_inputs <- file.path(dir_inputs, "Inputs.xlsx")
 
-
+if (!dir.exists(dir_outputs)) {
+  dir.create(dir_outputs)
+} else {
+  # Limpia resultados previos para asegurar que la corrida genere solo resultados nuevos.
+  old_outputs <- list.files(dir_outputs, full.names = TRUE, all.files = TRUE, no.. = TRUE)
+  if (length(old_outputs) > 0) unlink(old_outputs, recursive = TRUE, force = TRUE)
+}
 
 
 
@@ -146,14 +155,14 @@ read_tormentas <- function(file_path, sheet) {
 # 
 # =====================================================================
 
-Tormentas <- read_tormentas(file.path(getwd(), "Inputs.xlsx"), "Tormentas")
-PP_Max <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "Pp Max")
-CD <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "CD")
+Tormentas <- read_tormentas(file_inputs, "Tormentas")
+PP_Max <- read_file_data(file_inputs, "Pp Max")
+CD <- read_file_data(file_inputs, "CD")
 
-Ratios_HU <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "Ratios", use_rownames = FALSE)
+Ratios_HU <- read_file_data(file_inputs, "Ratios", use_rownames = FALSE)
 colnames(Ratios_HU) <- c("t/Tp", "q/qp", "Qa/Q")
 
-Param_HUS <- read_file_data(file.path(getwd(),"Inputs.xlsx"), "HUS")
+Param_HUS <- read_file_data(file_inputs, "HUS")
 colnames(Param_HUS) <- c("Area", "CN", "dt propuesto", "dt", "Tp", "Tb", "qp")
 
 
@@ -472,59 +481,204 @@ HED <- lapply(cuencas, function(cuenca) {
 
 
 # =====================================================================
-# Resumen HED: Caudal Máximo y Volumen Total
+# Resumen HED: Caudal Maximo y Volumen Total (NO USAR POR AHORA)
 # =====================================================================
 
 # Resumen_HED[[cuenca]][[tormenta]][[periodo]][[duracion]]
-# → data.frame con columnas: q_max [m3/s], volumen [m3]
+# -> data.frame con columnas: q_max [m3/s], volumen [m3]
 
-Resumen_HED <- lapply(cuencas, function(cuenca) {
-  dt <- Param_HUS[cuenca, "dt"]
-  
-  lapply(names(Tormentas), function(nombre_tormenta) {
-    
-    lapply(periodos, function(periodo) {
-      
-      lapply(seq_along(duraciones), function(i) {
-        dur <- duraciones[i]
-        
-        hed   <- HED[[cuenca]][[nombre_tormenta]][[periodo]][[dur]]
-        q_max <- max(hed[["q"]])
-        
-        # Volumen total: suma de caudales * dt [h] * 3600 [s/h] → [m3]
-        vol   <- sum(hed[["q"]]) * dt * 3600
-        
-        data.frame(
-          q_max_m3s  = q_max,
-          volumen_m3 = vol
-        )
-        
-      }) |> setNames(duraciones)
-      
-    }) |> setNames(periodos)
-    
-  }) |> setNames(names(Tormentas))
-  
-}) |> setNames(cuencas)
+# Resumen_HED <- lapply(cuencas, function(cuenca) {
+#   dt <- Param_HUS[cuenca, "dt"]
+#
+#   lapply(names(Tormentas), function(nombre_tormenta) {
+#
+#     lapply(periodos, function(periodo) {
+#
+#       lapply(seq_along(duraciones), function(i) {
+#         dur <- duraciones[i]
+#
+#         hed   <- HED[[cuenca]][[nombre_tormenta]][[periodo]][[dur]]
+#         q_max <- max(hed[["q"]])
+#
+#         # Volumen total: suma de caudales * dt [h] * 3600 [s/h] -> [m3]
+#         vol   <- sum(hed[["q"]]) * dt * 3600
+#
+#         data.frame(
+#           q_max_m3s  = q_max,
+#           volumen_m3 = vol
+#         )
+#
+#       }) |> setNames(duraciones)
+#
+#     }) |> setNames(periodos)
+#
+#   }) |> setNames(names(Tormentas))
+#
+# }) |> setNames(cuencas)
 
 # --- Imprimir resumen en consola ---
-cat("\n========== RESUMEN HED: Q_MAX y VOLUMEN ==========\n")
+# cat("\n========== RESUMEN HED: Q_MAX y VOLUMEN ==========\n")
+# for (cuenca in cuencas) {
+#   cat(sprintf("\n>>> Cuenca: %s\n", cuenca))
+#   for (tormenta in names(Tormentas)) {
+#     cat(sprintf("  Tormenta: %s\n", tormenta))
+#     for (periodo in periodos) {
+#       cat(sprintf("    T = %s anios\n", periodo))
+#       for (dur in duraciones) {
+#         res <- Resumen_HED[[cuenca]][[tormenta]][[periodo]][[dur]]
+#         cat(sprintf(
+#           "      Duracion %s h -> Q_max = %.3f m3/s | Volumen = %.1f m3\n",
+#           dur, res[["q_max_m3s"]], res[["volumen_m3"]]
+#         ))
+#       }
+#     }
+#   }
+# }
+
+
+# =====================================================================
+# Exportacion de resultados HED a Outputs (cuenca/tormenta)
+# =====================================================================
+
+safe_name <- function(x) {
+  # Normaliza nombres para Windows: sin caracteres invalidos, sin espacios repetidos
+  # y sin puntos/espacios al final.
+  s <- as.character(x)
+  s <- iconv(s, from = "", to = "ASCII//TRANSLIT", sub = "_")
+  s <- gsub('[\\\\/:*?"<>|]', "_", s)
+  s <- gsub('[[:cntrl:]]', "", s)
+  s <- gsub('\\s+', "_", s)
+  s <- gsub('[^[:alnum:]_.-]', "_", s)
+  s <- gsub('_+', "_", s)
+  s <- gsub('^[._ ]+|[._ ]+$', "", s)
+  if (is.na(s) || s == "") s <- "sin_nombre"
+  s
+}
+
 for (cuenca in cuencas) {
-  cat(sprintf("\n>>> Cuenca: %s\n", cuenca))
-  for (tormenta in names(Tormentas)) {
-    cat(sprintf("  Tormenta: %s\n", tormenta))
-    for (periodo in periodos) {
-      cat(sprintf("    T = %s años\n", periodo))
+  dir_cuenca <- file.path(dir_outputs, safe_name(cuenca))
+  if (!dir.exists(dir_cuenca)) dir.create(dir_cuenca, recursive = TRUE)
+
+  dt <- Param_HUS[cuenca, "dt"]
+
+  for (nombre_tormenta in names(Tormentas)) {
+    dir_tormenta <- file.path(dir_cuenca, safe_name(nombre_tormenta))
+    if (!dir.exists(dir_tormenta)) dir.create(dir_tormenta, recursive = TRUE)
+
+    wb <- openxlsx::createWorkbook()
+    resumen_rows <- list()
+    datos_rows <- list()
+
+    for (j in seq_along(periodos)) {
+      periodo <- periodos[j]
+      # Grafico por periodo con todas las duraciones superpuestas.
+      labels_dur <- paste0(duraciones, "h")
+      paleta_alto_contraste <- c(
+        "#0072B2", "#D55E00", "#009E73", "#CC79A7",
+        "#E69F00", "#56B4E9", "#F0E442", "#000000"
+      )
+      colores <- rep(paleta_alto_contraste, length.out = length(duraciones))
+      tipos_linea <- rep(c(1, 2, 3, 4, 5, 6), length.out = length(duraciones))
+
+      y_max <- max(sapply(duraciones, function(dur) {
+        max(HED[[cuenca]][[nombre_tormenta]][[periodo]][[dur]][["q"]], na.rm = TRUE)
+      }), na.rm = TRUE)
+
+      # Nombre muy corto y secuencial para evitar rutas invalidas/largas en Windows.
+      png_file <- file.path(dir_tormenta, sprintf("HED_%02d.png", j))
+
+      if (!dir.exists(dir_tormenta)) {
+        stop(sprintf("No existe carpeta de salida para graficos: %s", dir_tormenta))
+      }
+
+      # Verificacion defensiva de ruta para evitar error "invalid 'filename'" en Windows.
+      if (nchar(png_file) >= 240) {
+        stop(sprintf("Ruta de grafico demasiado larga (%d caracteres): %s", nchar(png_file), png_file))
+      }
+
+      png_opened <- FALSE
+      try({
+        grDevices::png(filename = png_file, width = 1400, height = 900, res = 140, type = "cairo-png")
+        png_opened <- TRUE
+      }, silent = TRUE)
+      if (!png_opened) {
+        grDevices::png(filename = png_file, width = 1400, height = 900, res = 140)
+      }
+      first_dur <- duraciones[1]
+      first_hed <- HED[[cuenca]][[nombre_tormenta]][[periodo]][[first_dur]]
+
+      plot(
+        first_hed[["time"]], first_hed[["q"]],
+        type = "l", lwd = 2.2, col = colores[1], lty = tipos_linea[1],
+        ylim = c(0, ifelse(is.finite(y_max) && y_max > 0, y_max * 1.05, max(first_hed[["q"]], na.rm = TRUE))),
+        xlab = "Tiempo [h]", ylab = "Caudal [m3/s]",
+        main = paste0("HED - Cuenca: ", cuenca, " | Tormenta: ", nombre_tormenta, " | T=", periodo)
+      )
+
+      if (length(duraciones) > 1) {
+        for (i in 2:length(duraciones)) {
+          dur_i <- duraciones[i]
+          hed_i <- HED[[cuenca]][[nombre_tormenta]][[periodo]][[dur_i]]
+          lines(hed_i[["time"]], hed_i[["q"]], lwd = 2.2, col = colores[i], lty = tipos_linea[i])
+        }
+      }
+
+      legend(
+        "topright",
+        legend = labels_dur,
+        col = colores,
+        lwd = 2.2,
+        lty = tipos_linea,
+        title = "Duracion"
+      )
+      grid(col = "gray85")
+      grDevices::dev.off()
+
       for (dur in duraciones) {
-        res <- Resumen_HED[[cuenca]][[tormenta]][[periodo]][[dur]]
-        cat(sprintf(
-          "      Duración %s h → Q_max = %.3f m3/s | Volumen = %.1f m3\n",
-          dur, res[["q_max_m3s"]], res[["volumen_m3"]]
-        ))
+        hed <- HED[[cuenca]][[nombre_tormenta]][[periodo]][[dur]]
+
+        q_max <- max(hed[["q"]], na.rm = TRUE)
+        vol   <- sum(hed[["q"]], na.rm = TRUE) * dt * 3600
+
+        resumen_rows[[length(resumen_rows) + 1]] <- data.frame(
+          cuenca = cuenca,
+          tormenta = nombre_tormenta,
+          "T (años)" = as.character(periodo),
+          "Duración (horas)" = as.numeric(dur),
+          "Q máx (m3/s)" = q_max,
+          "Volumen (m3)" = vol,
+          stringsAsFactors = FALSE
+        )
+
+        datos_rows[[length(datos_rows) + 1]] <- data.frame(
+          cuenca = cuenca,
+          tormenta = nombre_tormenta,
+          "T (años)" = as.character(periodo),
+          "Duración (horas)" = as.numeric(dur),
+          "Tiempo (horas)" = hed[["time"]],
+          "Q m3/s" = hed[["q"]],
+          stringsAsFactors = FALSE
+        )
       }
     }
+
+    df_resumen <- do.call(rbind, resumen_rows)
+    df_datos <- do.call(rbind, datos_rows)
+
+    # Hoja resumen por periodo/duracion (q_max y volumen)
+    openxlsx::addWorksheet(wb, "Resumen")
+    openxlsx::writeData(wb, "Resumen", df_resumen)
+
+    # Hoja con series completas de tiempo-caudal
+    openxlsx::addWorksheet(wb, "HED_series")
+    openxlsx::writeData(wb, "HED_series", df_datos)
+
+    out_xlsx <- file.path(dir_tormenta, "HED_resultados.xlsx")
+    openxlsx::saveWorkbook(wb, out_xlsx, overwrite = TRUE)
   }
 }
+
+cat("\nExportacion completada en carpeta Outputs.\n")
 
 
 
