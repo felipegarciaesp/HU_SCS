@@ -465,77 +465,6 @@ HED <- lapply(cuencas, function(cuenca) {
   
 }) |> setNames(cuencas)
 
-
-
-# SIGUIENTES PASOS:
-
-# 1. SE SUPONE QUE LAS PROFUNDIDADES DE EXCESO DE LLUVIA Y LA ESCORRENTIA DIRECTA DEBEN
-# SER IGUALES. HAZ LOS CAMBIOS DE UNIDADES RESPECTIVOS Y CORROBORA ESTO. AVERIGUA QUE HACER
-# SI ESTO NO SE CUMPLE.
-
-# 2. LO SIGUIENTE SERIA PEDIRLE A COPILOT QUE TE GENERE CARPETAS CON RESULTADOS Y GRAFICOS
-
-# EL CODIGO FUNCIONA, FELICITACIONES!! LO HAS COMPROBADO CON HECHMS!
-
-
-
-
-# =====================================================================
-# Resumen HED: Caudal Maximo y Volumen Total (NO USAR POR AHORA)
-# =====================================================================
-
-# Resumen_HED[[cuenca]][[tormenta]][[periodo]][[duracion]]
-# -> data.frame con columnas: q_max [m3/s], volumen [m3]
-
-# Resumen_HED <- lapply(cuencas, function(cuenca) {
-#   dt <- Param_HUS[cuenca, "dt"]
-#
-#   lapply(names(Tormentas), function(nombre_tormenta) {
-#
-#     lapply(periodos, function(periodo) {
-#
-#       lapply(seq_along(duraciones), function(i) {
-#         dur <- duraciones[i]
-#
-#         hed   <- HED[[cuenca]][[nombre_tormenta]][[periodo]][[dur]]
-#         q_max <- max(hed[["q"]])
-#
-#         # Volumen total: suma de caudales * dt [h] * 3600 [s/h] -> [m3]
-#         vol   <- sum(hed[["q"]]) * dt * 3600
-#
-#         data.frame(
-#           q_max_m3s  = q_max,
-#           volumen_m3 = vol
-#         )
-#
-#       }) |> setNames(duraciones)
-#
-#     }) |> setNames(periodos)
-#
-#   }) |> setNames(names(Tormentas))
-#
-# }) |> setNames(cuencas)
-
-# --- Imprimir resumen en consola ---
-# cat("\n========== RESUMEN HED: Q_MAX y VOLUMEN ==========\n")
-# for (cuenca in cuencas) {
-#   cat(sprintf("\n>>> Cuenca: %s\n", cuenca))
-#   for (tormenta in names(Tormentas)) {
-#     cat(sprintf("  Tormenta: %s\n", tormenta))
-#     for (periodo in periodos) {
-#       cat(sprintf("    T = %s anios\n", periodo))
-#       for (dur in duraciones) {
-#         res <- Resumen_HED[[cuenca]][[tormenta]][[periodo]][[dur]]
-#         cat(sprintf(
-#           "      Duracion %s h -> Q_max = %.3f m3/s | Volumen = %.1f m3\n",
-#           dur, res[["q_max_m3s"]], res[["volumen_m3"]]
-#         ))
-#       }
-#     }
-#   }
-# }
-
-
 # =====================================================================
 # Exportacion de resultados HED a Outputs (cuenca/tormenta)
 # =====================================================================
@@ -681,4 +610,11 @@ for (cuenca in cuencas) {
 cat("\nExportacion completada en carpeta Outputs.\n")
 
 
+
+
+# SIGUIENTES PASOS:
+
+# 1. SE SUPONE QUE LAS PROFUNDIDADES DE EXCESO DE LLUVIA Y LA ESCORRENTIA DIRECTA DEBEN
+# SER IGUALES. HAZ LOS CAMBIOS DE UNIDADES RESPECTIVOS Y CORROBORA ESTO. AVERIGUA QUE HACER
+# SI ESTO NO SE CUMPLE.
 
