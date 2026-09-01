@@ -62,6 +62,13 @@ create_empty_df <- function(index, columns) {
   df
 }
 
+validate_input_matrix <- function(df, mensaje_error) {
+  # Detecta hoja vacía (sin filas/columnas) o filas con periodo/duración pero sin datos asociados
+  if (nrow(df) == 0 || ncol(df) == 0 || all(is.na(as.matrix(df))) || any(rowSums(!is.na(df)) == 0)) {
+    stop(mensaje_error)
+  }
+}
+
 read_tormentas <- function(file_path, sheet) {
   # Leer hoja sin encabezados ni omitir filas/columnas vacías
   raw <- openxlsx::read.xlsx(
@@ -157,13 +164,21 @@ read_tormentas <- function(file_path, sheet) {
 
 Tormentas <- read_tormentas(file_inputs, "Tormentas")
 PP_Max <- read_file_data(file_inputs, "Pp Max")
+validate_input_matrix(PP_Max, "Se deben ingresar valores de precipitaciones máximas a analizar")
+
 CD <- read_file_data(file_inputs, "CD")
+validate_input_matrix(CD, "Se deben ingresar valores de coeficientes de duración a analizar")
 
 Ratios_HU <- read_file_data(file_inputs, "Ratios", use_rownames = FALSE)
 colnames(Ratios_HU) <- c("t/Tp", "q/qp", "Qa/Q")
 
 Param_HUS <- read_file_data(file_inputs, "HUS")
 colnames(Param_HUS) <- c("Area", "CN", "dt propuesto", "dt", "Tp", "Tb", "qp")
+
+dt_HUS <- Param_HUS[["dt"]]
+if (any(is.na(dt_HUS) | dt_HUS == 0)) {
+  stop("Se debe ingresar un valor para el paso temporal, y debe ser distinto de cero")
+}
 
 
 # =====================================================================
@@ -184,16 +199,6 @@ Pp_dur <- lapply(cuencas, function(cuenca) {
 
 names(Pp_dur) <- cuencas #Se asigna nombre de cuencas respectivas al df Pp_dur
 # =====================================================================
-
-
-# =====================================================================
-# Definicion de variables globales
-# =====================================================================
-  # Se utiliza esta sección para definir algunas variables globales, que seran
-  # utilizadas en distintas partes del código.
-
-
-#dt    <- Param_HUS[cuenca, "dt"] # Paso de tiempo escogido
 
 # =====================================================================
 # Confeccion de Hidrograma Unitario
