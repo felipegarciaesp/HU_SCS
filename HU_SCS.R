@@ -513,6 +513,10 @@ for (cuenca in cuencas) {
         max(HED[[cuenca]][[nombre_tormenta]][[periodo]][[dur]][["q"]], na.rm = TRUE)
       }), na.rm = TRUE)
 
+      x_max <- max(sapply(duraciones, function(dur) {
+        max(HED[[cuenca]][[nombre_tormenta]][[periodo]][[dur]][["time"]], na.rm = TRUE)
+      }), na.rm = TRUE)
+
       # Nombre muy corto y secuencial para evitar rutas invalidas/largas en Windows.
       png_file <- file.path(dir_tormenta, sprintf("HED_%02d.png", j))
 
@@ -539,6 +543,7 @@ for (cuenca in cuencas) {
       plot(
         first_hed[["time"]], first_hed[["q"]],
         type = "l", lwd = 2.2, col = colores[1], lty = tipos_linea[1],
+        xlim = c(0, ifelse(is.finite(x_max) && x_max > 0, x_max, max(first_hed[["time"]], na.rm = TRUE))),
         ylim = c(0, ifelse(is.finite(y_max) && y_max > 0, y_max * 1.05, max(first_hed[["q"]], na.rm = TRUE))),
         xlab = "Tiempo [h]", ylab = "Caudal [m3/s]",
         main = paste0("HED - Cuenca: ", cuenca, " | Tormenta: ", nombre_tormenta, " | T=", periodo)
@@ -553,7 +558,7 @@ for (cuenca in cuencas) {
       }
 
       legend(
-        "topright",
+        "topleft",
         legend = labels_dur,
         col = colores,
         lwd = 2.2,
@@ -594,6 +599,16 @@ for (cuenca in cuencas) {
     df_resumen <- do.call(rbind, resumen_rows)
     df_datos <- do.call(rbind, datos_rows)
 
+    # Encabezados finales (colnames<- evita que R los convierta a nombres sintacticos con puntos).
+    colnames(df_resumen) <- c(
+      "cuenca", "tormenta", "T_(years)", "Storm_Duration_(hrs)",
+      "Qmax_(cms)", "Volumen_(m3)"
+    )
+    colnames(df_datos) <- c(
+      "cuenca", "tormenta", "T_(years)", "Storm_Duration_(hrs)",
+      "Time_(hr)", "Q_(cms)"
+    )
+
     # Hoja resumen por periodo/duracion (q_max y volumen)
     openxlsx::addWorksheet(wb, "Resumen")
     openxlsx::writeData(wb, "Resumen", df_resumen)
@@ -608,13 +623,4 @@ for (cuenca in cuencas) {
 }
 
 cat("\nExportacion completada en carpeta Outputs.\n")
-
-
-
-
-# SIGUIENTES PASOS:
-
-# 1. SE SUPONE QUE LAS PROFUNDIDADES DE EXCESO DE LLUVIA Y LA ESCORRENTIA DIRECTA DEBEN
-# SER IGUALES. HAZ LOS CAMBIOS DE UNIDADES RESPECTIVOS Y CORROBORA ESTO. AVERIGUA QUE HACER
-# SI ESTO NO SE CUMPLE.
 
