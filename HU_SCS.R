@@ -589,6 +589,33 @@ for (cuenca in cuencas) {
           stringsAsFactors = FALSE
         )
 
+        # --- Nuevas columnas: precipitación total y precipitación efectiva ---
+        hiet_dt <- Hietograma_dt[[cuenca]][[nombre_tormenta]][[periodo]][[dur]]
+        hiet_ef <- Hietograma_ef[[cuenca]][[nombre_tormenta]][[periodo]][[dur]]
+
+        P_total_inc <- if (!is.null(hiet_dt)) hiet_dt[["Pp_inc"]] else rep(0, length(hed[["time"]]))
+        P_total_cum <- if (!is.null(hiet_dt)) hiet_dt[["Pp_cum"]] else rep(0, length(hed[["time"]]))
+        P_ef_inc    <- if (!is.null(hiet_ef)) hiet_ef[["Pp_ef_inc"]] else rep(0, length(hed[["time"]]))
+        P_ef_cum    <- if (!is.null(hiet_ef)) hiet_ef[["Pp_ef_cum"]] else rep(0, length(hed[["time"]]))
+
+        # Alinear/ajustar longitud de vectores al HED (rellenar con ceros para inc y con last value para cum)
+        n_hed <- length(hed[["time"]])
+        pad_len <- n_hed - length(P_total_inc)
+        if (pad_len > 0) {
+          P_total_inc <- c(P_total_inc, rep(0, pad_len))
+          last_total_cum <- if (length(P_total_cum) > 0) tail(P_total_cum, 1) else 0
+          P_total_cum <- c(P_total_cum, rep(last_total_cum, pad_len))
+          P_ef_inc <- c(P_ef_inc, rep(0, pad_len))
+          last_ef_cum <- if (length(P_ef_cum) > 0) tail(P_ef_cum, 1) else 0
+          P_ef_cum <- c(P_ef_cum, rep(last_ef_cum, pad_len))
+        } else if (pad_len < 0) {
+          # Truncar si por alguna razon el HED es mas corto (raro pero por seguridad)
+          P_total_inc <- head(P_total_inc, n_hed)
+          P_total_cum <- head(P_total_cum, n_hed)
+          P_ef_inc    <- head(P_ef_inc, n_hed)
+          P_ef_cum    <- head(P_ef_cum, n_hed)
+        }
+
         datos_rows[[length(datos_rows) + 1]] <- data.frame(
           cuenca = cuenca,
           tormenta = nombre_tormenta,
@@ -596,6 +623,10 @@ for (cuenca in cuencas) {
           "Duración (horas)" = as.numeric(dur),
           "Tiempo (horas)" = hed[["time"]],
           "Q m3/s" = hed[["q"]],
+          "Pp_total_inc_mm" = P_total_inc,
+          "Pp_total_cum_mm" = P_total_cum,
+          "Pp_ef_inc_mm" = P_ef_inc,
+          "Pp_ef_cum_mm" = P_ef_cum,
           stringsAsFactors = FALSE
         )
       }
@@ -611,7 +642,8 @@ for (cuenca in cuencas) {
     )
     colnames(df_datos) <- c(
       "cuenca", "tormenta", "T_(years)", "Storm_Duration_(hrs)",
-      "Time_(hr)", "Q_(cms)"
+      "Time_(hr)", "Q_(cms)",
+      "Pp_total_inc_(mm)", "Pp_total_cum_(mm)", "Pp_eff_inc_(mm)", "Pp_eff_cum_(mm)"
     )
 
     # Hoja resumen por periodo/duracion (q_max y volumen)
