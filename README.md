@@ -72,3 +72,17 @@ El valor adoptado queda a criterio del usuario: puede ser el promedio de todos l
 
 - Debe ser mayor o igual a 10 minutos (aproximadamente 0.167 hr).
 - Debe ingresarse en horas.
+
+### Pestana `HUS`
+
+En esta pestana se calculan los parametros necesarios para obtener el hidrograma unitario del SCS. Todos los parametros se calculan automaticamente en Excel; el usuario solo debe completar la celda correspondiente al paso temporal escogido.
+
+El paso temporal se utiliza tanto para calcular el hidrograma como el hietograma de tormenta y debe ingresarse en horas. La pestana calcula un valor de paso temporal propuesto; el valor escogido debe ser menor o igual a este valor propuesto.
+
+Se recomienda escoger un paso temporal que, expresado en minutos, sea divisor de 60. De esta forma, la discretizacion temporal llega exactamente a una hora.
+
+### Pestana `Pp Max`
+
+En esta pestana se ingresan las precipitaciones maximas correspondientes a los periodos de retorno que se desean analizar. El codigo itera sobre todas las precipitaciones maximas ingresadas, por lo que se recomienda completar solo los periodos de retorno relevantes para el analisis y evitar generar resultados innecesarios.
+
+Cada periodo de retorno debe ser unico; no se permiten periodos duplicados. El identificador del periodo de retorno tambien puede incluir texto, por ejemplo, `2-CC`. Los valores de precipitacion maxima deben ser numericos.
